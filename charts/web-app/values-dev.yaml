@@ -1,5 +1,5 @@
 image:
-  tag: main-ca899ea
+  tag: main-latest
 env:
   NODE_ENV: "development"
 config:
