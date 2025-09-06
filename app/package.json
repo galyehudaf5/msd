@@ -1,5 +1,5 @@
 { "name":"web-app","version":"0.0.0","private":true,"type":"module",
   "scripts":{"start":"node src/server.js","dev":"node src/server.js","lint":"eslint .","test":"jest --runInBand"},
   "dependencies":{"express":"^4.19.2"},
-  "devDependencies":{"@eslint/js":"^9.9.0","eslint":"^9.9.0","eslint-config-standard":"^17.1.0","eslint-plugin-import":"^2.29.1","eslint-plugin-n":"^17.9.0","eslint-plugin-promise":"^6.4.0","jest":"^29.7.0","supertest":"^6.3.4"}
+    "devDependencies":{"eslint":"^8.57.0","eslint-config-standard":"^17.1.0","eslint-plugin-import":"^2.29.1","eslint-plugin-n":"^16.6.2","eslint-plugin-promise":"^6.4.0","jest":"^29.7.0","supertest":"^6.3.4"}
 }
