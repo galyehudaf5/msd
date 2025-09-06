@@ -4,7 +4,7 @@ on:
     branches: [ main ]
     tags: [ 'v*' ]
 env:
-  IMAGE: ghcr.io/your-org/web-app
+  IMAGE: ghcr.io/galyehudaf5/msd
 jobs:
   build:
     runs-on: ubuntu-latest
