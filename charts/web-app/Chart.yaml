@@ -5,4 +5,4 @@ appVersion: v0.0.0
 dependencies:
 	- name: lib-base
 		version: 0.1.0
-	repository: "file://charts/lib-base"
+		repository: "file://charts/lib-base"
