@@ -39,6 +39,16 @@ jobs:
             ${{ env.IMAGE }}:${{ steps.ver.outputs.git_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Push main-latest tag on main
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: app
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:main-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Update chart appVersion on tags only
         if: startsWith(github.ref, 'refs/tags/v')
         run: |

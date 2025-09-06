@@ -7,3 +7,4 @@ env: {}
 config:
   webMessage: "Hello from default"
 replicas: 2
+imagePullSecrets: []
