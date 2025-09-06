@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-  repoURL: https://github.com/galyehudaf5/msd
+    repoURL: https://github.com/galyehudaf5/msd
     targetRevision: main
     path: charts/web-app
     helm:
