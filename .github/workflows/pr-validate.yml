@@ -2,6 +2,13 @@ name: PR Validate
 on:
   pull_request:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/pr-validate.yml'
+      - '!**/*.md'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest

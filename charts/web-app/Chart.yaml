@@ -2,7 +2,3 @@ apiVersion: v2
 name: web-app
 version: 0.1.0
 appVersion: v0.0.0
-dependencies:
-	- name: lib-base
-		version: 0.1.0
-		repository: "file://charts/lib-base"
