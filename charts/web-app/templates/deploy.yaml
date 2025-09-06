@@ -1,0 +1,6 @@
+{{- $ctx := . -}}
+{{ include "lib.configmap" $ctx }}
+---
+{{ include "lib.service" $ctx }}
+---
+{{ include "lib.deployment" $ctx }}

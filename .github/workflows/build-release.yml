@@ -1,0 +1,58 @@
+name: Build & Release
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+env:
+  IMAGE: ghcr.io/your-org/web-app
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set versions
+        id: ver
+        run: |
+          GIT_SHA=$(git rev-parse --short HEAD)
+          if [[ "${GITHUB_REF##*/}" == v* ]]; then
+            APP_VER="${GITHUB_REF##*/}"
+          else
+            APP_VER="main-${GIT_SHA}"
+          fi
+          echo "app_ver=$APP_VER" >> $GITHUB_OUTPUT
+          echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: app
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.ver.outputs.app_ver }}
+            ${{ env.IMAGE }}:${{ steps.ver.outputs.git_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Update chart appVersion on tags only
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          yq_installer="https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz"
+          curl -L "$yq_installer" | tar xz && sudo mv yq_linux_amd64 /usr/local/bin/yq
+          yq -i '.appVersion = "${{ steps.ver.outputs.app_ver }}"' charts/web-app/Chart.yaml
+          yq -i '.version |= . + "+${{ steps.ver.outputs.git_sha }}"' charts/web-app/Chart.yaml
+      - name: Commit chart bump (tag builds)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci@example"
+          git checkout -b chore/chart-bump-${{ steps.ver.outputs.app_ver }}
+          git add charts/web-app/Chart.yaml
+          git commit -m "chore: bump chart appVersion to ${{ steps.ver.outputs.app_ver }}"
+          git push -u origin HEAD

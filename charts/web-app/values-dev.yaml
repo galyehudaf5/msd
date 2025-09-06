@@ -1,0 +1,6 @@
+image:
+  tag: main-latest
+env:
+  NODE_ENV: "development"
+config:
+  webMessage: "Hello from DEV"

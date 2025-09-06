@@ -1,0 +1,9 @@
+image:
+  repository: ghcr.io/your-org/web-app
+  tag: main-latest
+service:
+  port: 8080
+env: {}
+config:
+  webMessage: "Hello from default"
+replicas: 2
