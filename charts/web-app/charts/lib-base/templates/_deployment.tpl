@@ -24,7 +24,7 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port | default 8080 }}
           env:
-            {{- range $k, $v in .Values.env }}
+            {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: "{{ $v }}"
             {{- end }}
