@@ -58,6 +58,19 @@ jobs:
             ${{ env.IMAGE }}:main-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Write back image tag to dev values (main)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          sudo apt-get update -y
+          yq_installer="https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz"
+          curl -L "$yq_installer" | tar xz && sudo mv yq_linux_amd64 /usr/local/bin/yq
+          # Set dev image tag to the built app version (e.g., main-<sha>)
+          yq -i '.image.tag = "${{ steps.ver.outputs.app_ver }}"' charts/web-app/values-dev.yaml
+          git config user.name "ci-bot"
+          git config user.email "ci@example"
+          git add charts/web-app/values-dev.yaml
+          git commit -m "chore(dev): set image.tag to ${{ steps.ver.outputs.app_ver }} [skip ci]" || echo "No changes to commit"
+          git push
       - name: Update chart appVersion on tags only
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
