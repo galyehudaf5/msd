@@ -3,4 +3,4 @@ image:
 env:
   NODE_ENV: "development"
 config:
-  webMessage: "Hello from DEV"
+  webMessage: "Hello from DEMO"
