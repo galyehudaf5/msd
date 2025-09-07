@@ -8,3 +8,43 @@ config:
   webMessage: "Hello from default"
 replicas: 2
 imagePullSecrets: []
+
+# Kubernetes resource requests/limits
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# Probes configuration
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /health
+    port: 8080
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+# Optional Ingress
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: web.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
