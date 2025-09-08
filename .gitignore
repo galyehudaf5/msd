@@ -1,0 +1,53 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+# keep lockfile for app only
+!/app/package-lock.json
+
+# Coverage and test output
+coverage/
+*.lcov
+.jest/**
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+**/.dockerignore
+**/Dockerfile.*.local
+
+# Helm
+charts/**/charts/*.tgz
+*.tgz
+.chart-checksum
+
+# Argo CD local files
+cd/**/*.local.yaml
+
+# Kubernetes client artifacts
+.kube/
+
+# Misc
+*.tmp
+*.temp
+~$*
