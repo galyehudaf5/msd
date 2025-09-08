@@ -2,7 +2,3 @@ apiVersion: v2
 name: lib-base
 type: library
 version: 0.1.0
-apiVersion: v2
-name: lib-base
-type: library
-version: 0.1.0
