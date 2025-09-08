@@ -1,5 +1,5 @@
 image:
-  tag: main-48c231c
+  tag: main-d6415b5
 env:
   NODE_ENV: "development"
 config:
