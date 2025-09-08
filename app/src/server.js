@@ -1,4 +1,5 @@
 import express from "express";
+// PR demo: no behavior change
 const app = express();
 const PORT = process.env.PORT || 8080;
 const WEB_MESSAGE = process.env.WEB_MESSAGE || "Hello from default";
