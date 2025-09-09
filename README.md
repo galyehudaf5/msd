@@ -1,86 +1,137 @@
+<div align="center">
+
 # msd
 
-## What’s left to do (and how to demo)
+End-to-end Dev → CI → Image Build → GitOps Deploy (Argo CD) with Helm library reuse & automated versioning.
 
-With CI passing and images in GHCR (public), you’re ready to deploy via Argo CD and then present the full flow. Follow these steps:
+</div>
 
-1) Local cluster and Argo CD
-- Create a local cluster (kind recommended) and install Argo CD.
-- Create namespaces for apps used by the repo.
+## Overview
 
-2) Apply GitOps manifests
-- Apply the App-of-Apps and the ApplicationSet. They already point to this repo and GHCR image.
+This repository demonstrates a production-ready (but intentionally minimal) workflow:
 
-3) Open Argo CD UI and sync
-- Log in to Argo CD, find `root-apps` → `web-app` and the two CNCF apps, ensure they sync and become Healthy.
+1. Feature branch changes are validated (lint, unit tests, coverage, Docker build) via GitHub Actions.
+2. Merges to `main` build and push an immutable image (`main-<git-sha>`) to GHCR and write back the new tag into `charts/web-app/values-dev.yaml`.
+3. Argo CD (App-of-Apps pattern) auto-syncs the `web-app` Helm release using that updated image tag.
+4. Optional semver tags (`vX.Y.Z`) produce versioned images and bump the Helm chart `appVersion` automatically.
 
-4) Verify the app
-- Port-forward the `web-app` service and hit both endpoints: `/` returns the ConfigMap-driven message, `/health` returns `{status:"ok"}`.
+This forms a clean, auditable chain: Git history = desired state; Argo CD reconciles cluster state to Git; all deployments trace back to commits and images.
 
-5) Optional: Release tagging
-- Create a Git tag `vX.Y.Z` to produce a versioned image and auto-bump the chart `appVersion` in CI.
+## Key Components
 
-### PowerShell (Windows) quickstart
+| Area | Implementation |
+|------|----------------|
+| Language / App | Node.js Express server with `/` and `/health` |
+| Tests | Jest (fast, single suit) |
+| Linting | ESLint (Standard config, no tabs) |
+| Container | Multi-stage Dockerfile with cached deps, smoke stage, HEALTHCHECK |
+| Registry | GHCR (public) |
+| Charts | Helm application chart + Helm library chart (`lib-base`) |
+| GitOps | Argo CD App-of-Apps + ApplicationSet (ingress-nginx, argo-rollouts) |
+| Config | ConfigMap-driven message (`config.webMessage`) + env vars |
+| Versioning | Image: `main-<sha>` + optional semver tags; Chart `appVersion` bumped on tag release |
+| Security | Only `GITHUB_TOKEN` (write:packages) needed; no embedded secrets |
 
-```powershell
-# 1) kind cluster
-kind create cluster --name dev
+## Repository Structure (Highlights)
 
-# 2) install Argo CD
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
-# 3) app namespaces (safe if they exist already)
-kubectl create namespace web ; kubectl create namespace ingress-nginx ; kubectl create namespace argo-rollouts
-
-# 4) apply GitOps manifests
-kubectl apply -n argocd -f cd/apps/app-of-apps.yaml
-kubectl apply -n argocd -f cd/applicationsets/cncf-apps.yaml
-
-# 5) get Argo CD admin password and open UI
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' |
-	% {[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_))}; echo
-kubectl -n argocd port-forward svc/argocd-server 8080:443
-# browse to https://localhost:8080 and log in as admin
-
-# 6) verify the app is running and test endpoints
-kubectl -n web get deploy,svc,pods
-kubectl -n web port-forward svc/web-app-web-app 8080:8080
-# In another terminal:
-curl http://localhost:8080/
-curl http://localhost:8080/health
+```
+app/                # Application code + Dockerfile + tests
+charts/web-app      # Helm application chart (consumes library)
+charts/web-app/charts/lib-base  # Helm library chart (Deployment/Service/ConfigMap templates)
+cd/apps             # Argo CD App-of-Apps + child app manifests
+cd/applicationsets  # ApplicationSet for CNCF dependencies
+.github/workflows   # PR validation + build & release pipelines
 ```
 
-## Assignment mapping and design notes
+## CI/CD Flow Details
 
-- Git best practices
-	- Main branch protected by PR validation (`.github/workflows/pr-validate.yml`).
-	- Feature branches: run lint/tests/coverage without version bumping.
-	- Clear commit messages; semantic tags `vX.Y.Z` drive releases.
+### PR Validation (`.github/workflows/pr-validate.yml`)
+Runs on pull requests to `main`:
+- `npm ci`
+- ESLint
+- Jest (coverage)
+- Docker build (ensures image will build, but no push)
 
-- Dockerfile (multi-stage + cache)
-	- `app/Dockerfile` uses a deps stage to cache `npm ci` and a minimal runtime stage.
-	- Uses `--mount=type=cache` for npm cache.
+### Build & Release (`.github/workflows/build-release.yml`)
+Triggered on merges to `main` and on tags:
+- Build multi-arch image (if configured) or default architecture
+- Tag & push: `main-<sha>`, `<short-sha>`, `main-latest`
+- Write back `charts/web-app/values-dev.yaml:image.tag`
+- On tag `vX.Y.Z`: push `vX.Y.Z` image + bump chart `appVersion`
 
-- CI pipeline (DRY, secrets, versioning)
-	- `.github/workflows/build-release.yml` builds with Buildx and pushes to GHCR.
-	- Uses the default `GITHUB_TOKEN` with write:packages (no hardcoded secrets). If org blocks GHCR, use a PAT secret (`GHCR_TOKEN`).
-	- Versioning: PR builds only test; merges to `main` push `main-<sha>`; tags `vX.Y.Z` push versioned images and auto-bump `charts/web-app/Chart.yaml` `appVersion`.
+### GitOps Reconciliation
+Argo CD watches the repo. When the workflow writes the new image tag to `values-dev.yaml`, Argo detects the commit and syncs the `web-app` deployment with the new immutable image.
 
-- Helm charts (library + app, ConfigMap)
-	- `charts/lib-base` is a Helm library chart (DRY templates for Deployment/Service/ConfigMap).
-	- `charts/web-app` consumes the library; `templates/deploy.yaml` includes the shared templates.
-	- Config via ConfigMap (`config.webMessage`) and environment (`values*.yaml`).
-	- `imagePullSecrets` supported (set `imagePullSecrets` in values if the image is private; you’re using public, so not needed).
+## Helm Library Pattern
+`lib-base` defines generic `_deployment.tpl`, `_service.tpl`, `_cm.tpl`. The application chart includes them to avoid duplication. This pattern scales cleanly if multiple services join later.
 
-- Argo CD (App-of-Apps + ApplicationSet)
-	- App-of-Apps: `cd/apps/app-of-apps.yaml` points to `cd/apps/children` for the app definitions.
-	- Child app: `cd/apps/children/web-app.yaml` deploys the chart from this repo with `values-dev.yaml` for dev env vars.
-	- ApplicationSet: `cd/applicationsets/cncf-apps.yaml` deploys `ingress-nginx` and `argo-rollouts` using the List generator (simple, explicit). Alternatives include Git, Cluster, and Matrix generators depending on fleet/cluster topology.
+## Configuration Strategy
+Values file drives:
+- Image tag
+- ConfigMap text (`config.webMessage`)
+- Environment variables (`env.NODE_ENV`)
 
-## Demo talking points
+Runtime container imports the ConfigMap and env vars so a values change (message) triggers a rollout via template hash changes.
 
-- End-to-end flow: commit → PR checks (lint/tests) → merge → CI builds/pushes GHCR image → Argo CD syncs to cluster.
-- Versioning: show image tags and chart `appVersion` bump on a tag release.
-- DRY: Helm library chart reused by application chart; minimal duplication in templates.
-- Secure CI: no plaintext secrets; least-privileged `GITHUB_TOKEN` with write:packages.
+## Local Development
+Minimal approach:
+```powershell
+cd app
+npm ci
+npm test
+npm run lint
+npm start  # (optional local run; not required for CI/CD demo)
+```
+
+## Running the GitOps Stack Locally (Kind + Argo CD)
+See `DEMO_RUNBOOK.md` for a scripted, interview-friendly sequence. Quick summary:
+1. Create Kind cluster & install Argo CD.
+2. Apply App-of-Apps & ApplicationSet manifests.
+3. Wait for sync → app Healthy.
+4. Port-forward service → hit `/` & `/health`.
+5. Make a tiny change → PR → merge → observe image tag update & rollout.
+
+## Versioned Release (Optional Showpiece)
+```powershell
+git tag v0.1.0
+git push origin v0.1.0
+```
+CI will:
+1. Build & push `v0.1.0` image.
+2. Bump `Chart.yaml` `appVersion` to `0.1.0` (commit back).
+3. Argo will reconcile using same (already published) image unless you also switch environments to use the semver tag.
+
+## Observability / Validation Tips
+```powershell
+# Current image in values (Git desired state)
+Select-String -Path charts/web-app/values-dev.yaml -Pattern 'image:' -Context 0,2
+
+# Deployment's live image
+kubectl -n web get deploy web-app-web-app -o jsonpath="{.spec.template.spec.containers[0].image}"; echo
+
+# Pod image (actual running)
+kubectl -n web get pods -l app.kubernetes.io/name=web-app -o jsonpath="{.items[0].spec.containers[0].image}"; echo
+
+# ConfigMap value
+kubectl -n web get cm web-app-web-app-cfg -o jsonpath="{.data.WEB_MESSAGE}"; echo
+```
+
+## Talking Points (Interview)
+- Immutable images + Git as source of truth.
+- Separation of concerns: fast host tests vs minimal container smoke stage.
+- DRY Helm library chart: scalable if adding more services.
+- Argo CD App-of-Apps for composition + ApplicationSet for addon lifecycle.
+- Safe automation: only workflow token; no manual kubectl after bootstrapping.
+- Deterministic rollouts: hash changes on ConfigMap & image ensure redeploys.
+
+## Next Possible Enhancements
+- Add policy gating (Conftest / OPA) in PR workflow.
+- Introduce progressive delivery (Argo Rollouts canary) using already-installed controller.
+- Add SBOM + image signing (cosign) step.
+- Add coverage threshold enforcement.
+
+## License
+Not specified; treat as internal demo unless a license is added.
+
+---
+For the full live demo script, open `DEMO_RUNBOOK.md`.
