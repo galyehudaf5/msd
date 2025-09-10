@@ -1,5 +1,5 @@
 image:
-  tag: main-9827426
+  tag: main-6dadb28
 env:
   NODE_ENV: "development"
 config:
