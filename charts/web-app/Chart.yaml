@@ -1,4 +1,4 @@
 apiVersion: v2
 name: web-app
-version: 0.1.0+ab4de60
-appVersion: v0.2.0
+version: 0.1.0+ab4de60+c54195a
+appVersion: v0.6.0
