@@ -1,0 +1,36 @@
+name: Tag Release (Chart Bump)
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set versions
+        id: ver
+        run: |
+          GIT_SHA=$(git rev-parse --short HEAD)
+          APP_VER="${GITHUB_REF##*/}"
+          echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+          echo "app_ver=$APP_VER" >> $GITHUB_OUTPUT
+      - name: Install yq
+        run: |
+          sudo apt-get update -y
+          yq_installer="https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz"
+          curl -L "$yq_installer" | tar xz && sudo mv yq_linux_amd64 /usr/local/bin/yq
+      - name: Bump Chart.yaml
+        run: |
+          yq -i '.appVersion = "${{ steps.ver.outputs.app_ver }}"' charts/web-app/Chart.yaml
+          yq -i '.version |= . + "+${{ steps.ver.outputs.git_sha }}"' charts/web-app/Chart.yaml
+      - name: Push bump branch
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci@example"
+          git checkout -b chore/chart-bump-${{ steps.ver.outputs.app_ver }}
+          git add charts/web-app/Chart.yaml
+          git commit -m "chore: bump chart appVersion to ${{ steps.ver.outputs.app_ver }}"
+          git push -u origin HEAD
