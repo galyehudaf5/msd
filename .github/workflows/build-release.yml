@@ -71,20 +71,3 @@ jobs:
           git add charts/web-app/values-dev.yaml
           git commit -m "chore(dev): set image.tag to ${{ steps.ver.outputs.app_ver }} [skip ci]" || echo "No changes to commit"
           git push
-      - name: Update chart appVersion on tags only
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          yq_installer="https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz"
-          curl -L "$yq_installer" | tar xz && sudo mv yq_linux_amd64 /usr/local/bin/yq
-          yq -i '.appVersion = "${{ steps.ver.outputs.app_ver }}"' charts/web-app/Chart.yaml
-          yq -i '.version |= . + "+${{ steps.ver.outputs.git_sha }}"' charts/web-app/Chart.yaml
-      - name: Commit chart bump (tag builds)
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          git config user.name "ci-bot"
-          git config user.email "ci@example"
-          git checkout -b chore/chart-bump-${{ steps.ver.outputs.app_ver }}
-          git add charts/web-app/Chart.yaml
-          git commit -m "chore: bump chart appVersion to ${{ steps.ver.outputs.app_ver }}"
-          git push -u origin HEAD
