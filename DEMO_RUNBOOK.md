@@ -95,12 +95,14 @@ kubectl -n web get pods -l app.kubernetes.io/name=web-app -o jsonpath="{.items[0
 Port-forward again (if restarted) and hit `/` to prove availability during change.
 
 ## 7. (Optional) Show Versioned Release (2–3 min)
-```powershell
-git tag v0.2.0
-git push origin v0.2.0
-```
-Explain: “Tag triggers the same build but also publishes `v0.2.0` image & bumps Helm chart `appVersion`.”
-After workflow:
+
+$ver = 'v0.8.0'
+git checkout main; git pull --ff-only
+git tag -a $ver -m "Release $ver"
+git push origin $ver
+
+Explain: “A tag triggers two workflows: Build & Release builds/pushes the image tag (vX.Y.Z + short SHA), and Tag Release opens a chore/chart-bump-vX.Y.Z branch updating Helm Chart.yaml appVersion + version metadata.”
+After workflows:
 ```powershell
 Select-String -Path charts/web-app/Chart.yaml -Pattern 'appVersion'
 ```
